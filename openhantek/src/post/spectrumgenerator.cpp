@@ -28,16 +28,16 @@ SpectrumGenerator::SpectrumGenerator( const DsoSettingsScope *scope, const DsoSe
 SpectrumGenerator::~SpectrumGenerator() {
     if ( scope->verboseLevel > 1 )
         qDebug() << " SpectrumGenerator::~SpectrumGenerator()";
-    if ( analysis->reuseFftPlan ) {
-        if ( fftPlan_R2HC ) {
-            fftw_destroy_plan( fftPlan_R2HC );
-            fftPlan_R2HC = nullptr;
-        }
-        if ( fftPlan_HC2R ) {
-            fftw_destroy_plan( fftPlan_HC2R );
-            fftPlan_HC2R = nullptr;
-        }
-    }
+//    if ( analysis->reuseFftPlan ) {
+//        if ( fftPlan_R2HC ) {
+//            fftw_destroy_plan( fftPlan_R2HC );
+//            fftPlan_R2HC = nullptr;
+//        }
+//        if ( fftPlan_HC2R ) {
+//            fftw_destroy_plan( fftPlan_HC2R );
+//            fftPlan_HC2R = nullptr;
+//        }
+//    }
 }
 
 
@@ -198,7 +198,7 @@ void SpectrumGenerator::process( PPresult *result ) {
         }
 
         // Allocate the sample buffer (16byte aligned)
-        fftWindowedValues = fftw_alloc_real( size_t( qMax( SAMPLESIZE, sampleCount ) ) );
+//        fftWindowedValues = fftw_alloc_real( size_t( qMax( SAMPLESIZE, sampleCount ) ) );
         if ( nullptr == fftWindowedValues )
             break;
 
@@ -262,19 +262,19 @@ void SpectrumGenerator::process( PPresult *result ) {
 
         // Do discrete real to half-complex transformation
         // Record length should be multiple of 2, 3, 5: done, is 10000 = 2^a * 5^b
-        fftHcSpectrum = fftw_alloc_real( size_t( std::max( SAMPLESIZE, sampleCount ) ) );
-        if ( nullptr == fftHcSpectrum ) // error
-            break;
-        if ( analysis->reuseFftPlan ) {    // build one optimized plan and reuse it for all transformations
-            if ( nullptr == fftPlan_R2HC ) // not yet created, do it now (this takes some time)
-                fftPlan_R2HC = fftw_plan_r2r_1d( sampleCount, fftWindowedValues, fftHcSpectrum, FFTW_R2HC, FFTW_MEASURE );
-            fftw_execute_r2r( fftPlan_R2HC, fftWindowedValues, fftHcSpectrum ); // but it will run faster
-        } else { // build a more generic plan, this takes much less time than the optimized plan
-            fftPlan_R2HC = fftw_plan_r2r_1d( sampleCount, fftWindowedValues, fftHcSpectrum, FFTW_R2HC, FFTW_ESTIMATE );
-            fftw_execute( fftPlan_R2HC );      // use it once
-            fftw_destroy_plan( fftPlan_R2HC ); // and destroy it
-            fftPlan_R2HC = nullptr;            // no plan available;
-        }
+//        fftHcSpectrum = fftw_alloc_real( size_t( std::max( SAMPLESIZE, sampleCount ) ) );
+//        if ( nullptr == fftHcSpectrum ) // error
+//            break;
+//        if ( analysis->reuseFftPlan ) {    // build one optimized plan and reuse it for all transformations
+//            if ( nullptr == fftPlan_R2HC ) // not yet created, do it now (this takes some time)
+//                fftPlan_R2HC = fftw_plan_r2r_1d( sampleCount, fftWindowedValues, fftHcSpectrum, FFTW_R2HC, FFTW_MEASURE );
+//            fftw_execute_r2r( fftPlan_R2HC, fftWindowedValues, fftHcSpectrum ); // but it will run faster
+//        } else { // build a more generic plan, this takes much less time than the optimized plan
+//            fftPlan_R2HC = fftw_plan_r2r_1d( sampleCount, fftWindowedValues, fftHcSpectrum, FFTW_R2HC, FFTW_ESTIMATE );
+//            fftw_execute( fftPlan_R2HC );      // use it once
+//            fftw_destroy_plan( fftPlan_R2HC ); // and destroy it
+//            fftPlan_R2HC = nullptr;            // no plan available;
+//        }
         // Do an autocorrelation to get the frequency of the signal
         // fft: f(t) o-- F(ω); calculate power spectrum |F(ω)|²
         // ifft: F(ω) ∙ F(ω) --o f(t) ⊗ f(t) (convolution of f(t) with f(t), i.e. autocorrelation)
@@ -323,21 +323,21 @@ void SpectrumGenerator::process( PPresult *result ) {
         fftAutoCorrelation = fftHcSpectrum;
         fftHcSpectrum = nullptr;
 
-        // Do half-complex to real inverse transformation -> autocorrelation
-        if ( analysis->reuseFftPlan ) { // same as above for time -> spectrum
-            if ( nullptr == fftPlan_HC2R )
-                fftPlan_HC2R = fftw_plan_r2r_1d( sampleCount, fftPowerSpectrum, fftAutoCorrelation, FFTW_HC2R, FFTW_MEASURE );
-            fftw_execute_r2r( fftPlan_HC2R, fftPowerSpectrum, fftAutoCorrelation );
-        } else {
-            fftw_plan fftPlan_HC2R =
-                fftw_plan_r2r_1d( sampleCount, fftPowerSpectrum, fftAutoCorrelation, FFTW_HC2R, FFTW_ESTIMATE );
-            fftw_execute( fftPlan_HC2R );
-            fftw_destroy_plan( fftPlan_HC2R );
-            fftPlan_HC2R = nullptr;
-        }
-        // content was destroyed during iFFT, free the memory
-        fftw_free( fftPowerSpectrum );
-        fftPowerSpectrum = nullptr;
+//        // Do half-complex to real inverse transformation -> autocorrelation
+//        if ( analysis->reuseFftPlan ) { // same as above for time -> spectrum
+//            if ( nullptr == fftPlan_HC2R )
+//                fftPlan_HC2R = fftw_plan_r2r_1d( sampleCount, fftPowerSpectrum, fftAutoCorrelation, FFTW_HC2R, FFTW_MEASURE );
+//            fftw_execute_r2r( fftPlan_HC2R, fftPowerSpectrum, fftAutoCorrelation );
+//        } else {
+//            fftw_plan fftPlan_HC2R =
+//                fftw_plan_r2r_1d( sampleCount, fftPowerSpectrum, fftAutoCorrelation, FFTW_HC2R, FFTW_ESTIMATE );
+//            fftw_execute( fftPlan_HC2R );
+//            fftw_destroy_plan( fftPlan_HC2R );
+//            fftPlan_HC2R = nullptr;
+//        }
+//        // content was destroyed during iFFT, free the memory
+//        fftw_free( fftPowerSpectrum );
+//        fftPowerSpectrum = nullptr;
 
         // Get the frequency from the correlation results
         int peakCorrPos = 0;
@@ -358,8 +358,8 @@ void SpectrumGenerator::process( PPresult *result ) {
                 // printf( "min %d: %g\n", position, minCorr );
             }
         }
-        fftw_free( fftAutoCorrelation );
-        fftAutoCorrelation = nullptr;
+//        fftw_free( fftAutoCorrelation );
+//        fftAutoCorrelation = nullptr;
 
         // Finally calculate the real spectrum (it's also used for frequency calculation)
         // Convert values into dB (Relative to the reference level 0 dBV = 1V eff)
@@ -429,10 +429,10 @@ void SpectrumGenerator::process( PPresult *result ) {
         }
     }
     // free the memory used for fft unless already done ("fftw_free( nullptr )" is a no-op)
-    fftw_free( fftWindowedValues );
-    fftw_free( fftHcSpectrum );
-    fftw_free( fftPowerSpectrum );
-    fftw_free( fftAutoCorrelation );
+//    fftw_free( fftWindowedValues );
+//    fftw_free( fftHcSpectrum );
+//    fftw_free( fftPowerSpectrum );
+//    fftw_free( fftAutoCorrelation );
 }
 
 

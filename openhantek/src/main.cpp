@@ -332,39 +332,41 @@ int main( int argc, char *argv[] ) {
 
     std::unique_ptr< ScopeDevice > scopeDevice = nullptr;
 
-    if ( !demoMode ) {
-        if ( verboseLevel )
-            qDebug() << startupTime.elapsed() << "ms:"
-                     << "init libusb";
-        int error = libusb_init( &context );
-        if ( error ) {
-            SelectSupportedDevice().showLibUSBFailedDialogModel( error );
-            return -1;
-        }
-        if ( useLocale ) // localize USB error messages, supported: "en", "nl", "fr", "ru"
-            libusb_setlocale( QLocale().name().toLocal8Bit().constData() );
+//    if ( !demoMode ) {
+//        if ( verboseLevel )
+//            qDebug() << startupTime.elapsed() << "ms:"
+//                     << "init libusb";
+//        int error = libusb_init( &context );
+//        if ( error ) {
+//            SelectSupportedDevice().showLibUSBFailedDialogModel( error );
+//            return -1;
+//        }
+//        if ( useLocale ) // localize USB error messages, supported: "en", "nl", "fr", "ru"
+//            libusb_setlocale( QLocale().name().toLocal8Bit().constData() );
 
-        // SelectSupportedDevive returns a real device unless demoMode is true
-        if ( verboseLevel )
-            qDebug() << startupTime.elapsed() << "ms:"
-                     << "show splash screen";
-        scopeDevice = SelectSupportedDevice().showSelectDeviceModal( context, verboseLevel );
-        if ( scopeDevice && scopeDevice->isDemoDevice() ) {
-            demoMode = true;
-            libusb_exit( context ); // stop all USB activities
-            context = nullptr;
-        } else {
-            QString errorMessage;
-            if ( scopeDevice == nullptr || !scopeDevice->connectDevice( errorMessage ) ) {
-                libusb_exit( context ); // clean USB
-                if ( !errorMessage.isEmpty() )
-                    qCritical() << errorMessage;
-                return -1;
-            }
-        }
-    } else {
-        scopeDevice = std::unique_ptr< ScopeDevice >( new ScopeDevice() );
-    }
+//        // SelectSupportedDevive returns a real device unless demoMode is true
+//        if ( verboseLevel )
+//            qDebug() << startupTime.elapsed() << "ms:"
+//                     << "show splash screen";
+//        scopeDevice = SelectSupportedDevice().showSelectDeviceModal( context, verboseLevel );
+//        if ( scopeDevice && scopeDevice->isDemoDevice() ) {
+//            demoMode = true;
+//            libusb_exit( context ); // stop all USB activities
+//            context = nullptr;
+//        } else {
+//            QString errorMessage;
+//            if ( scopeDevice == nullptr || !scopeDevice->connectDevice( errorMessage ) ) {
+//                libusb_exit( context ); // clean USB
+//                if ( !errorMessage.isEmpty() )
+//                    qCritical() << errorMessage;
+//                return -1;
+//            }
+//        }
+//    } else {
+//        scopeDevice = std::unique_ptr< ScopeDevice >( new ScopeDevice() );
+//    }
+
+    scopeDevice = std::unique_ptr< ScopeDevice >( new ScopeDevice() );
 
     // Here we have either a connected scope device or a demo device w/o hardware
     const DSOModel *model = scopeDevice->getModel();
@@ -424,7 +426,7 @@ int main( int argc, char *argv[] ) {
 
     postProcessing.registerProcessor( &samplesToExportRaw );
     // postProcessing.registerProcessor( &mathchannelGenerator );
-    postProcessing.registerProcessor( &spectrumGenerator );
+//    postProcessing.registerProcessor( &spectrumGenerator );
     postProcessing.registerProcessor( &graphGenerator );
 
     postProcessing.moveToThread( &postProcessingThread );

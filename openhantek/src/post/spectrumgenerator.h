@@ -8,7 +8,7 @@
 #include <QThread>
 #include <memory>
 
-#include <fftw3.h>
+//#include <fftw3.h>
 
 #include "analysissettings.h"
 #include "dsosamples.h"
@@ -34,8 +34,8 @@ class SpectrumGenerator : public Processor {
     const DsoSettingsAnalysis *analysis;
     Dso::WindowFunction previousWindowFunction = Dso::WindowFunction( -1 ); ///< The previously used dft window function
     std::vector< double > window;                                           ///< storage for the tapering window
-    fftw_plan fftPlan_R2HC = nullptr;
-    fftw_plan fftPlan_HC2R = nullptr;
+//    fftw_plan fftPlan_R2HC = nullptr;
+//    fftw_plan fftPlan_HC2R = nullptr;
     QString note;
     const QString &calculateNote( double frequency );
     // Processor interface
