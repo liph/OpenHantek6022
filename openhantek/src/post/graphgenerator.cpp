@@ -75,7 +75,7 @@ void GraphGenerator::generateGraphsTYvoltage( PPresult *result ) {
         const SampleValues &sampleValues = useVoltSamplesOf( channel, result, scope );
 
         // Check if this channel is used and available at the data analyzer
-        if ( sampleValues.samples.empty() ) {
+        if (!sampleValues.samples || sampleValues.samples->empty() ) {
             // Delete all vector arrays
             graphVoltage.clear();
             graphHistogram.clear();
@@ -89,13 +89,22 @@ void GraphGenerator::generateGraphsTYvoltage( PPresult *result ) {
         unsigned preTrigSamples = unsigned( scope->trigger.position * dotsOnScreen );
         // align displayed trace with trigger mark on screen ...
         // ... also if trig pos or time/div was changed on a "frozen" or single trace
-        int leftmostSample = int( result->triggeredPosition );
-        if ( leftmostSample )                     // adjust position if triggered, else start from sample[0]
-            leftmostSample -= preTrigSamples + 1; // shift samples to show a stable trace
         int leftmostPosition = 0;                 // start position on display
-        if ( leftmostSample < 0 ) {               // trig pos or time/div was increased
-            leftmostPosition = -leftmostSample;   // trace can't start on left margin
-            leftmostSample = 0;                   // show as much as we have on left side
+        int leftmostSample = 0;
+        if (dotsOnScreen < sampleValues.samples->size())
+        {
+            leftmostSample = sampleValues.samples->size() - dotsOnScreen;
+        }
+        if(result->triggeredPosition > 0)
+        {
+            leftmostSample = int( result->triggeredPosition );
+            if ( leftmostSample )                     // adjust position if triggered, else start from sample[0]
+                leftmostSample -= preTrigSamples + 1; // shift samples to show a stable trace
+
+            if ( leftmostSample < 0 ) {               // trig pos or time/div was increased
+                leftmostPosition = -leftmostSample;   // trace can't start on left margin
+                leftmostSample = 0;                   // show as much as we have on left side
+            }
         }
 
         const unsigned binsPerDiv = 50; // resolution of histogram
@@ -107,8 +116,8 @@ void GraphGenerator::generateGraphsTYvoltage( PPresult *result ) {
         const double gain = scope->gain( channel );
         const double offset = scope->voltage[ channel ].offset;
 
-        auto sampleIterator = sampleValues.samples.cbegin() + leftmostSample; // -> visible samples
-        auto sampleEnd = sampleValues.samples.cend();
+        auto sampleIterator = sampleValues.samples->cbegin() + leftmostSample; // -> visible samples
+        auto sampleEnd = sampleValues.samples->cend() - 1;
 
         // sinc interpolation if there are too less samples on screen
         // https://ccrma.stanford.edu/~jos/resample/resample.pdf
@@ -120,7 +129,7 @@ void GraphGenerator::generateGraphsTYvoltage( PPresult *result ) {
             const unsigned int resampleSize = ( left + dotsOnScreen + sincWidth ) * oversample;
             resample.clear();                // invalidate old content
             resample.resize( resampleSize ); //  ... and init with zero because we accumulate the convolution
-            auto sampleIt = sampleValues.samples.cbegin() + leftmostSample;
+            auto sampleIt = sampleValues.samples->cbegin() + leftmostSample;
             for ( unsigned int resamplePos = 0; resamplePos < resampleSize; resamplePos += oversample ) {
                 resample[ resamplePos ] += *sampleIt; // sinc( 0 ) sum up, do NOT assign
                 auto sincIt = sinc.cbegin();          // -> one half of sinc pulse without sinc(0)
@@ -194,13 +203,13 @@ void GraphGenerator::generateGraphsTYspectrum( PPresult *result ) {
         const SampleValues &sampleValues = useSpecSamplesOf( channel, result, scope );
 
         // Check if this channel is used and available at the data analyzer
-        if ( sampleValues.samples.empty() ) {
+        if (!sampleValues.samples || sampleValues.samples->empty() ) {
             // Delete all vector arrays
             graphSpectrum.clear();
             continue;
         }
         // Check if the sample count has changed
-        size_t sampleCount = sampleValues.samples.size();
+        size_t sampleCount = sampleValues.samples->size();
         size_t neededSize = sampleCount * 2;
 
         // Set size directly to avoid reallocations
@@ -210,7 +219,7 @@ void GraphGenerator::generateGraphsTYspectrum( PPresult *result ) {
         double horizontalFactor = sampleValues.interval / scope->horizontal.frequencybase;
 
         // Fill vector array
-        std::vector< double >::const_iterator dataIterator = sampleValues.samples.begin();
+        std::vector< double >::const_iterator dataIterator = sampleValues.samples->begin();
         const double magnitude = scope->spectrum[ channel ].magnitude;
         const double offset = scope->spectrum[ channel ].offset;
 
@@ -246,20 +255,20 @@ void GraphGenerator::generateGraphsXY( PPresult *result ) {
         const SampleValues &ySamples = useVoltSamplesOf( yChannel, result, scope );
 
         // The channels need to be active
-        if ( !xSamples.samples.size() || !ySamples.samples.size() ) {
+        if ( !xSamples.samples->size() || !ySamples.samples->size() ) {
             result->vaChannelVoltage[ xChannel ].clear();
             result->vaChannelVoltage[ yChannel ].clear();
             continue;
         }
 
         // Check if the sample count has changed
-        const size_t sampleCount = std::min( xSamples.samples.size(), ySamples.samples.size() );
+        const size_t sampleCount = std::min( xSamples.samples->size(), ySamples.samples->size() );
         ChannelGraph &graphXY = result->vaChannelVoltage[ yChannel ]; // color of y channel
         graphXY.reserve( sampleCount * 2 );
 
         // Fill vector array
-        std::vector< double >::const_iterator xIterator = xSamples.samples.begin();
-        std::vector< double >::const_iterator yIterator = ySamples.samples.begin();
+        std::vector< double >::const_iterator xIterator = xSamples.samples->begin();
+        std::vector< double >::const_iterator yIterator = ySamples.samples->begin();
         const double xGain = scope->gain( xChannel );
         const double yGain = scope->gain( yChannel );
         const double xOffset = ( scope->trigger.position - 0.5 ) * DIVS_TIME;

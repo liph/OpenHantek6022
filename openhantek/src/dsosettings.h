@@ -13,7 +13,7 @@ const unsigned CONFIG_VERSION = 2;
 
 #include "post/analysissettings.h"
 #include "scopesettings.h"
-#include "usb/scopedevice.h"
+//#include "usb/scopedevice.h"
 #include "viewsettings.h"
 
 /// \brief Holds the settings of the program.
@@ -21,7 +21,7 @@ class DsoSettings {
     Q_DECLARE_TR_FUNCTIONS( DsoSettings )
 
   public:
-    explicit DsoSettings( const ScopeDevice *scopeDevice, int verboseLevel = 0, bool resetSettings = false );
+    explicit DsoSettings(int channels, int verboseLevel = 0, bool resetSettings = false );
     bool saveToFile( const QString &filename );
     bool loadFromFile( const QString &filename );
 
@@ -31,9 +31,9 @@ class DsoSettings {
     bool exportProcessedSamples = true;      ///< Used for exporting
     bool alwaysSave = true;                  ///< Always save the settings on exit
     unsigned configVersion = CONFIG_VERSION; ///< Handle incompatible changes
-    const QString deviceName;                ///< the human readable device name, e.g. DSO-6022BE
-    const QString deviceID;                  ///< The unique serial number of EzUSB
-    const unsigned deviceFW;                 ///< The FW version number (BCD)
+    QString deviceName;                ///< the human readable device name, e.g. DSO-6022BE
+    QString deviceID;                  ///< The unique serial number of EzUSB
+    unsigned deviceFW;                 ///< The FW version number (BCD)
 
     QByteArray mainWindowGeometry; ///< Geometry of the main window
     QByteArray mainWindowState;    ///< State of docking windows and toolbars
@@ -46,8 +46,8 @@ class DsoSettings {
 
   private:
     std::unique_ptr< QSettings > storeSettings;
-    const Dso::ControlSpecification *deviceSpecification;
     void setDefaultConfig();
     int verboseLevel = 0;
     bool resetSettings = false;
+    int MaxChannels = 0;
 };

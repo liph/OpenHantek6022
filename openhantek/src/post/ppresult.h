@@ -11,7 +11,7 @@
 
 /// \brief Struct for a array of sample values.
 struct SampleValues {
-    std::vector< double > samples; ///< Vector holding the sampling data
+    std::vector< double >* samples; ///< Vector holding the sampling data
     double interval = 0.0;         ///< The interval between two sample values
 };
 

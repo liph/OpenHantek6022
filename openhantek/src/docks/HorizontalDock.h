@@ -32,7 +32,7 @@ class HorizontalDock : public QDockWidget {
     /// \param settings The target settings object.
     /// \param parent The parent widget.
     /// \param flags Flags for the window manager.
-    HorizontalDock( DsoSettingsScope *scope, const Dso::ControlSpecification *spec, QWidget *parent );
+    HorizontalDock( DsoSettingsScope *scope, QWidget *parent );
 
     /// \brief Changes the samplerate.
     /// \param samplerate The samplerate in seconds.

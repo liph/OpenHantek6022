@@ -9,8 +9,8 @@
 #include "dsosettings.h"
 #include "post/ppresult.h"
 
-ExporterRegistry::ExporterRegistry( const Dso::ControlSpecification *deviceSpecification, DsoSettings *settings, QObject *parent )
-    : QObject( parent ), deviceSpecification( deviceSpecification ), settings( settings ) {}
+ExporterRegistry::ExporterRegistry(DsoSettings *settings, QObject *parent )
+    : QObject( parent ), settings( settings ) {}
 
 bool ExporterRegistry::processData( std::shared_ptr< PPresult > &data, ExporterInterface *const &exporter ) {
     if ( !exporter->samples( data ) ) {

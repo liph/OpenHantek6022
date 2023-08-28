@@ -17,16 +17,18 @@
 #include "hantekdso/controlspecification.h"
 #include "sispinbox.h"
 #include "utils/printutils.h"
+#include "hantekdso/enums.h"
 
+static const std::vector< Dso::TriggerMode > triggerModes = { Dso::TriggerMode::ROLL, Dso::TriggerMode::AUTO, Dso::TriggerMode::NORMAL, Dso::TriggerMode::SINGLE };
 
-TriggerDock::TriggerDock( DsoSettingsScope *scope, const Dso::ControlSpecification *spec, QWidget *parent )
-    : QDockWidget( tr( "Trigger" ), parent ), scope( scope ), mSpec( spec ) {
+TriggerDock::TriggerDock( DsoSettingsScope *scope, QWidget *parent )
+    : QDockWidget( tr( "Trigger" ), parent ), scope( scope ) {
 
     if ( scope->verboseLevel > 1 )
         qDebug() << " TriggerDock::TriggerDock()";
 
     // Initialize lists for comboboxes
-    for ( ChannelID channel = 0; channel < mSpec->channels; ++channel )
+    for ( ChannelID channel = 0; channel < scope->maxChannels; ++channel )
         sourceStandardStrings << tr( "CH%1" ).arg( channel + 1 );
     sourceStandardStrings << tr( "MATH" );
     // add "smooth" source
@@ -37,7 +39,7 @@ TriggerDock::TriggerDock( DsoSettingsScope *scope, const Dso::ControlSpecificati
     modeComboBox = new QComboBox();
     if ( scope->toolTipVisible )
         modeComboBox->setToolTip( tr( "Select the trigger mode" ) );
-    for ( Dso::TriggerMode mode : mSpec->triggerModes )
+    for ( Dso::TriggerMode mode : triggerModes )
         modeComboBox->addItem( Dso::triggerModeString( mode ) );
 
     slopeLabel = new QLabel( tr( "Slope" ) );
@@ -78,7 +80,7 @@ TriggerDock::TriggerDock( DsoSettingsScope *scope, const Dso::ControlSpecificati
 
     // Connect signals and slots
     connect( modeComboBox, static_cast< void ( QComboBox::* )( int ) >( &QComboBox::currentIndexChanged ), [ this ]( int index ) {
-        this->scope->trigger.mode = mSpec->triggerModes[ unsigned( index ) ];
+        this->scope->trigger.mode = triggerModes[ unsigned( index ) ];
         emit modeChanged( this->scope->trigger.mode );
     } );
     connect( slopeComboBox, static_cast< void ( QComboBox::* )( int ) >( &QComboBox::currentIndexChanged ), [ this ]( int index ) {
@@ -100,7 +102,7 @@ void TriggerDock::loadSettings( DsoSettingsScope *scope ) {
         qDebug() << "  TDock::loadSettings()";
     // Set values
     if ( scope->trigger.mode != Dso::TriggerMode::ROLL && scope->horizontal.timebase < 0.2 ) // remove ROLL mode
-        modeComboBox->setMaxCount( int( mSpec->triggerModes.size() ) - 1 );
+        modeComboBox->setMaxCount( int( triggerModes.size() ) - 1 );
     setMode( scope->trigger.mode );
     setSlope( scope->trigger.slope );
     setSource( scope->trigger.source );
@@ -111,11 +113,11 @@ void TriggerDock::loadSettings( DsoSettingsScope *scope ) {
 void TriggerDock::timebaseChanged( double timebase ) { // provide ROLL mode only if samplerate > 100 ms/div
     if ( scope->trigger.mode == Dso::TriggerMode::ROLL )
         return;
-    if ( timebase > 0.1 && modeComboBox->count() == int( mSpec->triggerModes.size() ) - 1 ) { // add ROLL mode
-        modeComboBox->setMaxCount( int( mSpec->triggerModes.size() ) );
-        modeComboBox->addItem( Dso::triggerModeString( Dso::TriggerMode( mSpec->triggerModes.size() - 1 ) ) );
+    if ( timebase > 0.1 && modeComboBox->count() == int( triggerModes.size() ) - 1 ) { // add ROLL mode
+        modeComboBox->setMaxCount( int( triggerModes.size() ) );
+        modeComboBox->addItem( Dso::triggerModeString( Dso::TriggerMode( triggerModes.size() - 1 ) ) );
     } else if ( timebase <= 0.1 ) { // remove ROLL mode
-        modeComboBox->setMaxCount( int( mSpec->triggerModes.size() ) - 1 );
+        modeComboBox->setMaxCount( int( triggerModes.size() ) - 1 );
     }
 }
 
@@ -131,7 +133,7 @@ void TriggerDock::closeEvent( QCloseEvent *event ) {
 void TriggerDock::setMode( Dso::TriggerMode mode ) {
     if ( scope->verboseLevel > 2 )
         qDebug() << "  TDock::setMode()" << int( mode );
-    int index = int( std::find( mSpec->triggerModes.begin(), mSpec->triggerModes.end(), mode ) - mSpec->triggerModes.begin() );
+    int index = int( std::find( triggerModes.begin(), triggerModes.end(), mode ) - triggerModes.begin() );
     QSignalBlocker blocker( modeComboBox );
     modeComboBox->setCurrentIndex( index );
     emit modeChanged( scope->trigger.mode );

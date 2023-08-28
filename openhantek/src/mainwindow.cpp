@@ -35,7 +35,9 @@
 
 #include "OH_VERSION.h"
 
-MainWindow::MainWindow( HantekDsoControl *dsoControl, DsoSettings *settings, ExporterRegistry *exporterRegistry, QWidget *parent )
+#include <input/dsoinput.h>
+
+MainWindow::MainWindow( DsoInput *dsoControl, DsoSettings *settings, ExporterRegistry *exporterRegistry, QWidget *parent )
     : QMainWindow( parent ), ui( new Ui::MainWindow ), dsoSettings( settings ), exporterRegistry( exporterRegistry ) {
 
     if ( dsoSettings->scope.verboseLevel > 1 )
@@ -129,10 +131,10 @@ MainWindow::MainWindow( HantekDsoControl *dsoControl, DsoSettings *settings, Exp
 
     // Window title
     setWindowIcon( QIcon( ":/images/OpenHantek.svg" ) );
-    setWindowTitle( dsoControl->getDevice()->isRealHW()
+    setWindowTitle( false
                         ? tr( "OpenHantek6022 (%1) - Device %2 (FW%3)" )
-                              .arg( QString::fromStdString( VERSION ), dsoControl->getModel()->name )
-                              .arg( dsoControl->getDevice()->getFwVersion(), 4, 16, QChar( '0' ) )
+                              .arg( QString::fromStdString( VERSION ), "as" )
+                              .arg( 1, 4, 16, QChar( '0' ) )
                         : tr( "OpenHantek6022 (%1) - " ).arg( QString::fromStdString( VERSION ) ) + tr( "Demo Mode" ) );
 
 #if ( QT_VERSION >= QT_VERSION_CHECK( 5, 6, 0 ) )
@@ -197,207 +199,131 @@ MainWindow::MainWindow( HantekDsoControl *dsoControl, DsoSettings *settings, Exp
     }
 
     DsoSettingsScope *scope = &( dsoSettings->scope );
-    const Dso::ControlSpecification *spec = dsoControl->getModel()->spec();
 
     registerDockMetaTypes();
 
     // Docking windows
     // Create dock windows before the dso widget, they fix messed up settings
 
-    VoltageDock *voltageDock = new VoltageDock( scope, spec, this );
-    HorizontalDock *horizontalDock = new HorizontalDock( scope, spec, this );
-    TriggerDock *triggerDock = new TriggerDock( scope, spec, this );
-    SpectrumDock *spectrumDock = new SpectrumDock( scope, this );
+    VoltageDock *voltageDock = new VoltageDock( scope, this );
+    HorizontalDock *horizontalDock = new HorizontalDock( scope, this );
+    //TriggerDock *triggerDock = new TriggerDock( scope, this );
+    //SpectrumDock *spectrumDock = new SpectrumDock( scope, this );
 
     addDockWidget( Qt::RightDockWidgetArea, voltageDock );
     addDockWidget( Qt::RightDockWidgetArea, horizontalDock );
-    addDockWidget( Qt::RightDockWidgetArea, triggerDock );
-    addDockWidget( Qt::RightDockWidgetArea, spectrumDock );
+    //addDockWidget( Qt::RightDockWidgetArea, triggerDock );
+    //addDockWidget( Qt::RightDockWidgetArea, spectrumDock );
 
     restoreGeometry( dsoSettings->mainWindowGeometry );
     restoreState( dsoSettings->mainWindowState );
 
     // Central oszilloscope widget
-    dsoWidget = new DsoWidget( &dsoSettings->scope, &dsoSettings->view, spec );
+    dsoWidget = new DsoWidget( &dsoSettings->scope, &dsoSettings->view);
     setCentralWidget( dsoWidget );
 
-    if ( dsoControl->getDevice()->isRealHW() ) { // enable online calibration and manual command input
-        // Command field inside the status bar
-        commandEdit = new QLineEdit( this );
-        // allowed commands are either control command "cc E0..E6 xx [xx ...]" or frequency command "freq nn"
-        QRegExpValidator *v = new QRegExpValidator( QRegExp( "(cc|CC) [eE][0-6]( [0-9a-fA-F]{1,2})+|freq \\d{1,6}" ), this );
-        commandEdit->setValidator( v );
-        commandEdit->hide();
-        statusBar()->addPermanentWidget( commandEdit, 1 );
-
-        connect( ui->actionCalibrateOffset, &QAction::toggled, [ this, dsoControl, scope ]( bool active ) {
-            if ( active )
-                active = ( QMessageBox::Apply ==
-                           QMessageBox::information( this, tr( "Calibrate Offset" ),
-                                                     tr( "Short-circuit both inputs and slowly select all voltage gain settings" ),
-                                                     QMessageBox::Apply | QMessageBox::Abort, QMessageBox::Abort ) );
-            if ( verboseLevel > 2 )
-                qDebug() << "  Calibrate offset" << active;
-            ui->actionCalibrateOffset->setChecked( active );
-            dsoControl->calibrateOffset( active );
-            scope->liveCalibrationActive = active;
-        } );
-
-        // disable calibration e.g. if zero signal too noisy or offset too big
-        connect( dsoControl, &HantekDsoControl::liveCalibrationError, [ this, scope ]() {
-            if ( verboseLevel > 2 )
-                qDebug() << "  Live calibration error";
-            scope->liveCalibrationActive = false;           // set incactive first to avoid ..
-            ui->actionCalibrateOffset->setChecked( false ); // .. calibration storage actions
-        } );
-
-        connect( ui->actionManualCommand, &QAction::toggled, [ this ]( bool checked ) {
-            commandEdit->setVisible( checked );
-            if ( checked )
-                commandEdit->setFocus();
-        } );
-
-        connect( commandEdit, &QLineEdit::returnPressed, [ this, dsoControl ]() {
-            Dso::ErrorCode errorCode = dsoControl->stringCommand( commandEdit->text() );
-            commandEdit->clear();
-            this->ui->actionManualCommand->setChecked( false );
-            if ( errorCode != Dso::ErrorCode::NONE )
-                statusBar()->showMessage( tr( "Invalid command" ), 3000 );
-        } );
+    if ( false ) { // enable online calibration and manual command input
 
     } else { // do not show these actions
         ui->actionCalibrateOffset->setDisabled( true );
         ui->actionManualCommand->setDisabled( true );
     }
+    connect(dsoControl, &DsoInput::newChannelData, voltageDock, &VoltageDock::onNewChannelData);
+    connect(dsoControl, &DsoInput::newChannelData2, voltageDock, &VoltageDock::onNewChannelData2);
 
     // Connect signals that display text in statusbar
-    connect( dsoControl, &HantekDsoControl::statusMessage, [ this ]( QString text, int timeout ) {
-        ui->actionManualCommand->setChecked( false );
-        statusBar()->showMessage( text, timeout );
-    } );
-
+//    connect( dsoControl, &HantekDsoControl::statusMessage, [ this ]( QString text, int timeout ) {
+//        ui->actionManualCommand->setChecked( false );
+//        statusBar()->showMessage( text, timeout );
+//    } );
+    dsoControl->setSamplerate( dsoSettings->scope.horizontal.samplerate );
     // Connect signals to DSO controller and widget
     connect( horizontalDock, &HorizontalDock::samplerateChanged, [ dsoControl, this ]() {
         dsoControl->setSamplerate( dsoSettings->scope.horizontal.samplerate );
         this->dsoWidget->updateSamplerate( dsoSettings->scope.horizontal.samplerate );
     } );
-    connect( horizontalDock, &HorizontalDock::timebaseChanged, triggerDock, &TriggerDock::timebaseChanged );
+//    connect( horizontalDock, &HorizontalDock::timebaseChanged, triggerDock, &TriggerDock::timebaseChanged );
     connect( horizontalDock, &HorizontalDock::timebaseChanged, [ dsoControl, this ]() {
         dsoControl->setRecordTime( dsoSettings->scope.horizontal.timebase * DIVS_TIME );
         this->dsoWidget->updateTimebase( dsoSettings->scope.horizontal.timebase );
     } );
-    connect( spectrumDock, &SpectrumDock::frequencybaseChanged,
-             [ this ]( double frequencybase ) { this->dsoWidget->updateFrequencybase( frequencybase ); } );
-    connect( dsoControl, &HantekDsoControl::samplerateChanged, [ this, horizontalDock, spectrumDock ]( double samplerate ) {
-        // The timebase was set, let's adapt the samplerate accordingly
-        // printf( "mainwindow::samplerateChanged( %g )\n", samplerate );
-        dsoSettings->scope.horizontal.samplerate = samplerate;
-        horizontalDock->setSamplerate( samplerate );
-        spectrumDock->setSamplerate( samplerate ); // mind the Nyquest frequency
-        dsoWidget->updateSamplerate( samplerate );
-    } );
+//    connect( spectrumDock, &SpectrumDock::frequencybaseChanged,
+//             [ this ]( double frequencybase ) { this->dsoWidget->updateFrequencybase( frequencybase ); } );
+//    connect( dsoControl, &DsoInput::samplerateChanged, [ this, horizontalDock, spectrumDock ]( double samplerate ) {
+//        // The timebase was set, let's adapt the samplerate accordingly
+//        // printf( "mainwindow::samplerateChanged( %g )\n", samplerate );
+//        dsoSettings->scope.horizontal.samplerate = samplerate;
+//        horizontalDock->setSamplerate( samplerate );
+//        spectrumDock->setSamplerate( samplerate ); // mind the Nyquest frequency
+//        dsoWidget->updateSamplerate( samplerate );
+//    } );
     connect( horizontalDock, &HorizontalDock::calfreqChanged,
              [ dsoControl, this ]() { dsoControl->setCalFreq( dsoSettings->scope.horizontal.calfreq ); } );
-    connect( horizontalDock, &HorizontalDock::formatChanged, [ = ]( Dso::GraphFormat format ) {
-        ui->actionHistogram->setEnabled( format == Dso::GraphFormat::TY );
-        spectrumDock->enableSpectrumDock( format == Dso::GraphFormat::TY );
-    } );
+//    connect( horizontalDock, &HorizontalDock::formatChanged, [ = ]( Dso::GraphFormat format ) {
+//        ui->actionHistogram->setEnabled( format == Dso::GraphFormat::TY );
+//        spectrumDock->enableSpectrumDock( format == Dso::GraphFormat::TY );
+//    } );
 
-    connect( triggerDock, &TriggerDock::modeChanged, dsoControl, &HantekDsoControl::setTriggerMode );
-    connect( triggerDock, &TriggerDock::modeChanged, dsoWidget, &DsoWidget::updateTriggerMode );
-    connect( triggerDock, &TriggerDock::modeChanged, horizontalDock, &HorizontalDock::triggerModeChanged );
-    connect( triggerDock, &TriggerDock::modeChanged, [ this ]( Dso::TriggerMode mode ) {
-        ui->actionRefresh->setVisible( Dso::TriggerMode::ROLL == mode && dsoSettings->scope.horizontal.samplerate < 10e3 );
-    } );
-    connect( dsoControl, &HantekDsoControl::samplerateChanged, [ this ]( double samplerate ) {
-        ui->actionRefresh->setVisible( Dso::TriggerMode::ROLL == dsoSettings->scope.trigger.mode && samplerate < 10e3 );
-    } );
-    connect( triggerDock, &TriggerDock::sourceChanged, dsoControl, &HantekDsoControl::setTriggerSource );
-    connect( triggerDock, &TriggerDock::sourceChanged, dsoWidget, &DsoWidget::updateTriggerSource );
-    connect( triggerDock, &TriggerDock::smoothChanged, dsoControl, &HantekDsoControl::setTriggerSmooth );
-    // should we send the smooth mode also to dsoWidget?
-    connect( triggerDock, &TriggerDock::slopeChanged, dsoControl, &HantekDsoControl::setTriggerSlope );
-    connect( triggerDock, &TriggerDock::slopeChanged, dsoWidget, &DsoWidget::updateTriggerSlope );
-    connect( dsoWidget, &DsoWidget::triggerPositionChanged, dsoControl, &HantekDsoControl::setTriggerPosition );
-    connect( dsoWidget, &DsoWidget::triggerLevelChanged, dsoControl, &HantekDsoControl::setTriggerLevel );
+//    connect( triggerDock, &TriggerDock::modeChanged, dsoControl, &DsoInput::setTriggerMode );
+//    connect( triggerDock, &TriggerDock::modeChanged, dsoWidget, &DsoWidget::updateTriggerMode );
+//    connect( triggerDock, &TriggerDock::modeChanged, horizontalDock, &HorizontalDock::triggerModeChanged );
+//    connect( triggerDock, &TriggerDock::modeChanged, [ this ]( Dso::TriggerMode mode ) {
+//        ui->actionRefresh->setVisible( Dso::TriggerMode::ROLL == mode && dsoSettings->scope.horizontal.samplerate < 10e3 );
+//    } );
+//    connect( dsoControl, &DsoInput::samplerateChanged, [ this ]( double samplerate ) {
+//        ui->actionRefresh->setVisible( Dso::TriggerMode::ROLL == dsoSettings->scope.trigger.mode && samplerate < 10e3 );
+//    } );
+//    connect( triggerDock, &TriggerDock::sourceChanged, dsoControl, &DsoInput::setTriggerSource );
+//    connect( triggerDock, &TriggerDock::sourceChanged, dsoWidget, &DsoWidget::updateTriggerSource );
+//    connect( triggerDock, &TriggerDock::smoothChanged, dsoControl, &DsoInput::setTriggerSmooth );
+//    // should we send the smooth mode also to dsoWidget?
+//    connect( triggerDock, &TriggerDock::slopeChanged, dsoControl, &DsoInput::setTriggerSlope );
+//    connect( triggerDock, &TriggerDock::slopeChanged, dsoWidget, &DsoWidget::updateTriggerSlope );
+    connect( dsoWidget, &DsoWidget::triggerPositionChanged, dsoControl, &DsoInput::setTriggerPosition );
+    connect( dsoWidget, &DsoWidget::triggerLevelChanged, dsoControl, &DsoInput::setTriggerLevel );
 
-    auto usedChanged = [ this, dsoControl, spec ]( ChannelID channel, unsigned channelMask ) {
-        if ( channel > spec->channels )
+    auto usedChanged = [ this, dsoControl, scope ]( ChannelID channel, unsigned channelMask ) {
+        if ( channel > scope->maxChannels )
             return;
         if ( dsoSettings->scope.verboseLevel > 2 )
             qDebug().noquote() << "  MW::uC()" << channel << QString::number( channelMask, 2 );
-        bool mathUsed = 3 == channelMask; // dsoSettings->scope.anyUsed( spec->channels );
+        bool mathUsed = 3 == channelMask; // dsoSettings->scope.anyUsed( scope->maxChannels );
 
         // Normal channel, check if voltage/spectrum or math channel is used
-        if ( channel < spec->channels )
+        if ( channel < scope->maxChannels )
             dsoControl->setChannelUsed( channel, mathUsed || dsoSettings->scope.anyUsed( channel ) );
         // Math channel, update all channels
-        else if ( channel == spec->channels ) {
-            for ( ChannelID c = 0; c < spec->channels; ++c )
+        else if ( channel == scope->maxChannels ) {
+            for ( ChannelID c = 0; c < scope->maxChannels; ++c )
                 dsoControl->setChannelUsed( c, ( ( c + 1 ) & channelMask ) || dsoSettings->scope.anyUsed( c ) );
         }
     };
     connect( voltageDock, &VoltageDock::usedChannelChanged, usedChanged );
-    connect( spectrumDock, &SpectrumDock::usedChannelChanged, usedChanged );
+//    connect( spectrumDock, &SpectrumDock::usedChannelChanged, usedChanged );
 
     connect( voltageDock, &VoltageDock::modeChanged, dsoWidget, &DsoWidget::updateMathMode );
-    connect( voltageDock, &VoltageDock::gainChanged, [ dsoControl, spec ]( ChannelID channel, double gain ) {
-        if ( channel > spec->channels )
+    connect( voltageDock, &VoltageDock::gainChanged, [ dsoControl, scope ]( ChannelID channel, double gain ) {
+        if ( channel > scope->maxChannels )
             return;
         dsoControl->setGain( channel, gain );
     } );
-    connect( voltageDock, &VoltageDock::probeAttnChanged, [ dsoControl, spec ]( ChannelID channel, double probeAttn ) {
-        if ( channel > spec->channels )
-            return;
-        dsoControl->setProbe( channel, probeAttn );
-    } );
-    connect( voltageDock, &VoltageDock::invertedChanged, [ dsoControl, spec ]( ChannelID channel, bool inverted ) {
-        if ( channel > spec->channels )
-            return;
-        dsoControl->setChannelInverted( channel, inverted );
-    } );
-    connect( voltageDock, &VoltageDock::couplingChanged, dsoWidget, &DsoWidget::updateVoltageCoupling );
-    connect( voltageDock, &VoltageDock::couplingChanged, [ dsoControl, spec ]( ChannelID channel, Dso::Coupling coupling ) {
-        if ( channel > spec->channels )
-            return;
-        dsoControl->setCoupling( channel, coupling );
-    } );
+
     connect( voltageDock, &VoltageDock::gainChanged, dsoWidget, &DsoWidget::updateVoltageGain );
     connect( voltageDock, &VoltageDock::usedChannelChanged, dsoWidget, &DsoWidget::updateVoltageUsed );
-    connect( spectrumDock, &SpectrumDock::usedChannelChanged, dsoWidget, &DsoWidget::updateSpectrumUsed );
-    connect( spectrumDock, &SpectrumDock::magnitudeChanged, dsoWidget, &DsoWidget::updateSpectrumMagnitude );
+//    connect( spectrumDock, &SpectrumDock::usedChannelChanged, dsoWidget, &DsoWidget::updateSpectrumUsed );
+//    connect( spectrumDock, &SpectrumDock::magnitudeChanged, dsoWidget, &DsoWidget::updateSpectrumMagnitude );
 
-    // Started/stopped signals from oscilloscope
-    connect( dsoControl, &HantekDsoControl::showSamplingStatus, this, [ this ]( bool enabled ) {
-        QSignalBlocker blocker( this->ui->actionSampling );
-        if ( enabled ) {
-            this->ui->actionSampling->setIcon( this->iconPause );
-            this->ui->actionSampling->setText( tr( "Stop" ) );
-            this->ui->actionSampling->setStatusTip( tr( "Stop the oscilloscope" ) );
-        } else {
-            this->ui->actionSampling->setIcon( this->iconPlay );
-            this->ui->actionSampling->setText( tr( "Start" ) );
-            this->ui->actionSampling->setStatusTip( tr( "Start the oscilloscope" ) );
-        }
-        this->ui->actionSampling->setChecked( enabled );
-    } );
-    connect( this->ui->actionSampling, &QAction::triggered, dsoControl, &HantekDsoControl::enableSamplingUI );
-    this->ui->actionSampling->setChecked( dsoControl->isSamplingUI() );
-
-    connect( this->ui->actionRefresh, &QAction::triggered, dsoControl, &HantekDsoControl::restartSampling );
-
-    connect( dsoControl, &HantekDsoControl::samplerateLimitsChanged, horizontalDock, &HorizontalDock::setSamplerateLimits );
-    connect( dsoControl, &HantekDsoControl::samplerateSet, horizontalDock, &HorizontalDock::setSamplerateSteps );
+    connect( this->ui->actionRefresh, &QAction::triggered, dsoControl, &DsoInput::restartSampling );
 
     // Load settings to GUI
     connect( this, &MainWindow::settingsLoaded, voltageDock, &VoltageDock::loadSettings );
     connect( this, &MainWindow::settingsLoaded, horizontalDock, &HorizontalDock::loadSettings );
-    connect( this, &MainWindow::settingsLoaded, spectrumDock, &SpectrumDock::loadSettings );
-    connect( this, &MainWindow::settingsLoaded, triggerDock, &TriggerDock::loadSettings );
-    connect( this, &MainWindow::settingsLoaded, dsoControl, &HantekDsoControl::applySettings );
+//    connect( this, &MainWindow::settingsLoaded, spectrumDock, &SpectrumDock::loadSettings );
+//    connect( this, &MainWindow::settingsLoaded, triggerDock, &TriggerDock::loadSettings );
+
     connect( this, &MainWindow::settingsLoaded, dsoWidget, &DsoWidget::updateSlidersSettings );
 
-    connect( ui->actionOpen, &QAction::triggered, [ this, spec ]() {
+    connect( ui->actionOpen, &QAction::triggered, [ this, scope ]() {
         QString configFileName = QFileDialog::getOpenFileName( this, tr( "Open file" ), "", tr( "Settings (*.conf)" ), nullptr,
                                                                QFileDialog::DontUseNativeDialog );
         if ( !configFileName.isEmpty() ) {
@@ -405,11 +331,11 @@ MainWindow::MainWindow( HantekDsoControl *dsoControl, DsoSettings *settings, Exp
             restoreGeometry( dsoSettings->mainWindowGeometry );
             restoreState( dsoSettings->mainWindowState );
 
-            emit settingsLoaded( &dsoSettings->scope, spec );
+            emit settingsLoaded( &dsoSettings->scope, nullptr );
 
             dsoWidget->updateTimebase( dsoSettings->scope.horizontal.timebase );
 
-            for ( ChannelID channel = 0; channel < spec->channels; ++channel ) {
+            for ( ChannelID channel = 0; channel < scope->maxChannels; ++channel ) {
                 this->dsoWidget->updateVoltageUsed( channel, dsoSettings->scope.voltage[ channel ].used );
                 this->dsoWidget->updateSpectrumUsed( channel, dsoSettings->scope.spectrum[ channel ].used );
             }
@@ -517,11 +443,11 @@ MainWindow::MainWindow( HantekDsoControl *dsoControl, DsoSettings *settings, Exp
                 tr( "<p>Running since %1 seconds.</p>" ).arg( elapsedTime.elapsed() / 1000 ) );
     } );
 
-    emit settingsLoaded( &dsoSettings->scope, spec ); // trigger the previously connected docks, widgets, etc.
+//    emit settingsLoaded( &dsoSettings->scope, spec ); // trigger the previously connected docks, widgets, etc.
 
     dsoWidget->updateTimebase( dsoSettings->scope.horizontal.timebase );
 
-    for ( ChannelID channel = 0; channel < spec->channels; ++channel ) {
+    for ( ChannelID channel = 0; channel < scope->maxChannels; ++channel ) {
         dsoWidget->updateVoltageUsed( channel, dsoSettings->scope.voltage[ channel ].used );
         dsoWidget->updateSpectrumUsed( channel, dsoSettings->scope.spectrum[ channel ].used );
     }

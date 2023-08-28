@@ -28,9 +28,9 @@ void PostProcessing::convertData( const DSOsamples *source, PPresult *destinatio
     }
 
     for ( ChannelID channel = 0; channel < source->data.size(); ++channel ) {
-        const std::vector< double > &rawChannelData = source->data.at( channel );
+        std::vector< double >* rawChannelData = source->data.at( channel );
 
-        if ( rawChannelData.empty() ) {
+        if (!rawChannelData || rawChannelData->empty() ) {
             continue;
         }
         DataChannel *const channelData = destination->modifiableData( channel );
@@ -39,7 +39,7 @@ void PostProcessing::convertData( const DSOsamples *source, PPresult *destinatio
         // printf( "PP CH%d: %d\n", channel+1, source->clipped );
         channelData->valid = !( source->clipped & ( 0x01 << channel ) );
     }
-    destination->modifiableData( 2 )->voltageUnit = source->mathVoltageUnit; // MATH channel unit
+    //destination->modifiableData( 2 )->voltageUnit = source->mathVoltageUnit; // MATH channel unit
     destination->tag = source->tag;
 }
 

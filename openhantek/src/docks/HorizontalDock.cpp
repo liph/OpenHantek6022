@@ -26,7 +26,7 @@ template < typename... Args > struct SELECT {
     }
 };
 
-HorizontalDock::HorizontalDock( DsoSettingsScope *scope, const Dso::ControlSpecification *spec, QWidget *parent )
+HorizontalDock::HorizontalDock( DsoSettingsScope *scope, QWidget *parent )
     : QDockWidget( tr( "Horizontal" ), parent ), scope( scope ) {
 
     if ( scope->verboseLevel > 1 )
@@ -59,7 +59,7 @@ HorizontalDock::HorizontalDock( DsoSettingsScope *scope, const Dso::ControlSpeci
         formatComboBox->addItem( Dso::graphFormatString( format ) );
 
     calfreqLabel = new QLabel( tr( "Calibration out" ) );
-    calfreqSteps = spec->calfreqSteps;
+    calfreqSteps = {};
     std::reverse( calfreqSteps.begin(), calfreqSteps.end() ); // put highest value on top of the list
     calfreqComboBox = new QComboBox();
     if ( scope->toolTipVisible )

@@ -12,6 +12,7 @@
 #include <QObject>
 #include <QThread>
 
+
 /**
  * Manages all post processing processors. Register another processor with `registerProcessor(p)`.
  * All processors, in the order of insertion, will process the input data, given by `input(data)`.

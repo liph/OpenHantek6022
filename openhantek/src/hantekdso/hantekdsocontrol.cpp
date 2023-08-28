@@ -741,8 +741,8 @@ void HantekDsoControl::convertRawDataToSamples() {
     result.samplerate = raw.samplerate / raw.oversampling;
     // Prepare result buffers
     result.data.resize( specification->channels + 1 ); // CH0, CH1, MATH
-    for ( ChannelID channelCounter = 0; channelCounter <= specification->channels; ++channelCounter )
-        result.data[ channelCounter ].clear();
+    //for ( ChannelID channelCounter = 0; channelCounter <= specification->channels; ++channelCounter )
+      //  result.data[ channelCounter ].clear();
 
     // Convert channel data
     // Channels are using their separate buffers
@@ -770,7 +770,7 @@ void HantekDsoControl::convertRawDataToSamples() {
         unsigned rawBufPos = 0;
         if ( raw.freeRun && raw.rollMode ) // show the "new" samples on the right screen side
             rawBufPos = raw.received;      // start with remaining "old" samples in buffer
-        result.data[ channel ].resize( resultSamples );
+        //result.data[ channel ].resize( resultSamples );
         rawBufPos += skipSamples * activeChannels; // skip first unstable samples
         result.clipped &= ~( 0x01 << channel );    // clear clipping flag
 
@@ -804,7 +804,7 @@ void HantekDsoControl::convertRawDataToSamples() {
             sample -= offsetCorr;
             sample *= gainCorr;
 
-            result.data[ channel ][ index ] = sign * sample / voltageScale * gainCalibration * probeAttn;
+            //result.data[ channel ][ index ] = sign * sample / voltageScale * gainCalibration * probeAttn;
         }
         liveOffset /= resultSamples;
 

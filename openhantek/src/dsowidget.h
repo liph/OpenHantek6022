@@ -36,7 +36,7 @@ class DsoWidget : public QWidget {
     /// \param dataAnalyzer The data analyzer that should be used as data source.
     /// \param parent The parent widget.
     /// \param flags Flags for the window manager.
-    DsoWidget( DsoSettingsScope *scope, DsoSettingsView *view, const Dso::ControlSpecification *spec, QWidget *parent = nullptr );
+    DsoWidget( DsoSettingsScope *scope, DsoSettingsView *view, QWidget *parent = nullptr );
 
     ~DsoWidget() override;
 
@@ -100,7 +100,6 @@ class DsoWidget : public QWidget {
 
     DsoSettingsScope *scope;
     DsoSettingsView *view;
-    const Dso::ControlSpecification *spec;
 
     GlScope *mainScope; ///< The main scope screen
     GlScope *zoomScope; ///< The optional magnified scope screen
@@ -114,7 +113,7 @@ class DsoWidget : public QWidget {
     int mainScopeRow = 0;
     int zoomScopeRow = 0;
     void setColors();
-    std::vector< Unit > voltageUnits = { UNIT_VOLTS, UNIT_VOLTS, UNIT_VOLTS };
+    std::vector< Unit > voltageUnits = { UNIT_VOLTS, UNIT_VOLTS, UNIT_VOLTS, UNIT_VOLTS, UNIT_VOLTS };
     bool cursorMeasurementValid = false;
     QPoint cursorGlobalPosition = QPoint();
     QPointF cursorMeasurementPosition = QPointF();

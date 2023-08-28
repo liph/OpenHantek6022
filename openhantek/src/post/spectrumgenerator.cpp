@@ -71,13 +71,13 @@ void SpectrumGenerator::process( PPresult *result ) {
     for ( ChannelID channel = 0; channel < result->channelCount(); ++channel ) {
         DataChannel *const channelData = result->modifiableData( channel );
 
-        if ( channelData->voltage.samples.empty() ) {
+        if ( channelData->voltage.samples->empty() ) {
             // Clear unused channels
             channelData->spectrum.interval = 0;
-            channelData->spectrum.samples.clear();
+            channelData->spectrum.samples->clear();
             continue;
         }
-        int sampleCount = int( channelData->voltage.samples.size() );
+        int sampleCount = int( channelData->voltage.samples->size() );
         if ( scope->verboseLevel > 5 )
             qDebug() << "     SpectrumGenerator::process()" << channel << "sampleCount:" << sampleCount;
 
@@ -209,7 +209,7 @@ void SpectrumGenerator::process( PPresult *result ) {
         int dftLength = sampleCount / 2;
 
         // Reallocate memory for samples if the sample count has changed
-        channelData->spectrum.samples.resize( size_t( sampleCount ) );
+        channelData->spectrum.samples->resize( size_t( sampleCount ) );
 
         // calculate the peak-to-peak value of the displayed part of trace
         double min = INT_MAX;
@@ -227,10 +227,10 @@ void SpectrumGenerator::process( PPresult *result ) {
         for ( int position = left; // left side of trace
               position <= right;   // right side
               ++position ) {
-            if ( channelData->voltage.samples[ unsigned( position ) ] < min )
-                min = channelData->voltage.samples[ unsigned( position ) ];
-            if ( channelData->voltage.samples[ unsigned( position ) ] > max )
-                max = channelData->voltage.samples[ unsigned( position ) ];
+            if ( (*channelData->voltage.samples)[ unsigned( position ) ] < min )
+                min = (*channelData->voltage.samples)[ unsigned( position ) ];
+            if ( (*channelData->voltage.samples)[ unsigned( position ) ] > max )
+                max = (*channelData->voltage.samples)[ unsigned( position ) ];
         }
         channelData->vmin = min;
         channelData->vmax = max;
@@ -238,14 +238,14 @@ void SpectrumGenerator::process( PPresult *result ) {
 
         // calculate the average value
         double dc = 0.0;
-        for ( auto &oneSample : channelData->voltage.samples )
+        for ( auto &oneSample : (*channelData->voltage.samples) )
             dc += oneSample;
         dc /= double( sampleCount );
         channelData->dc = dc;
 
         // now strip DC bias, calculate rms of AC component and apply window for fft to AC component
         double ac2 = 0.0;
-        auto voltageIterator = channelData->voltage.samples.begin();
+        auto voltageIterator = channelData->voltage.samples->begin();
         auto windowIterator = window.begin();
         double *pfftW = fftWindowedValues;
         for ( int position = 0; position < sampleCount; ++position ) {
@@ -297,7 +297,7 @@ void SpectrumGenerator::process( PPresult *result ) {
         double const *fwd = fftHcSpectrum;                   // forward "iterator"
         double const *rev = fftHcSpectrum + sampleCount - 1; // reverse "iterator"
         double *powerIterator = fftPowerSpectrum;
-        auto spectrumIterator = channelData->spectrum.samples.begin(); // this shall be displayed later
+        auto spectrumIterator = channelData->spectrum.samples->begin(); // this shall be displayed later
         // convert half-complex to magnitude square into spectrum.samples and into powerSpectrum
         *spectrumIterator = *fwd * *fwd;
         *powerIterator++ = *spectrumIterator++ * norm;
@@ -312,7 +312,7 @@ void SpectrumGenerator::process( PPresult *result ) {
         *powerIterator++ = *spectrumIterator++ * norm;
 
         // skip mirrored 2nd half (-1) of result spectrum
-        channelData->spectrum.samples.resize( size_t( dftLength + 1 ) );
+        channelData->spectrum.samples->resize( size_t( dftLength + 1 ) );
 
         // Complex values, all zero for autocorrelation
         for ( ++position; position < sampleCount; ++position ) {
@@ -370,7 +370,7 @@ void SpectrumGenerator::process( PPresult *result ) {
         position = 0;
         min = INT_MAX;
         max = INT_MIN;
-        for ( auto &oneSample : channelData->spectrum.samples ) {
+        for ( auto &oneSample : *channelData->spectrum.samples ) {
             // spectrum is power spectrum, but show amplitude spectrum -> 10 * log...
             double value = 10 * log10( oneSample ) + offset;
             // Check if this value has to be limited
@@ -415,11 +415,11 @@ void SpectrumGenerator::process( PPresult *result ) {
             double f1 = channelData->frequency / channelData->spectrum.interval;
             if ( f1 >= 1 ) { // position of fundamental frequency is usable
                 // get power of fundamental frequency
-                double p1 = pow( 10, channelData->spectrum.samples[ unsigned( round( f1 ) ) ] / 10 );
+                double p1 = pow( 10, (*channelData->spectrum.samples)[ unsigned( round( f1 ) ) ] / 10 );
                 if ( p1 > 0 ) {
                     double pn = 0.0;                                     // sum of power of harmonics
                     for ( double fn = 2 * f1; fn < dftLength; fn += f1 ) // iterate over all harmonics
-                        pn += pow( 10, channelData->spectrum.samples[ unsigned( round( fn ) ) ] / 10 );
+                        pn += pow( 10, (*channelData->spectrum.samples)[ unsigned( round( fn ) ) ] / 10 );
                     channelData->thd = sqrt( pn / p1 );
                     if ( scope->verboseLevel > 5 )
                         qDebug() << "     SpectrumGenerator::process() THD" << channel << p1 << pn << channelData->thd;

@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-#include <QApplication>
 #include <QColor>
 #include <QFileInfo>
 #include <QSettings>
 
 #include "dsosettings.h"
-#include "dsowidget.h"
 #include "hantekdso/mathmodes.h"
+#include "qdebug.h"
 
 /// \brief Set the number of channels.
 /// \param channels The new channel count, that will be applied to lists.
-DsoSettings::DsoSettings( const ScopeDevice *scopeDevice, int verboseLevel, bool resetSettings )
-    : deviceName( scopeDevice->getModel()->name ), deviceID( scopeDevice->getSerialNumber() ),
-      deviceFW( scopeDevice->getFwVersion() ), deviceSpecification( scopeDevice->getModel()->spec() ), verboseLevel( verboseLevel ),
-      resetSettings( resetSettings ) {
+DsoSettings::DsoSettings(int channels, int verboseLevel, bool resetSettings )
+    : verboseLevel( verboseLevel ),
+      resetSettings( resetSettings ), MaxChannels(channels) {
+    view.maxChannels = channels;
+    scope.maxChannels = channels;
     scope.verboseLevel = verboseLevel;
     if ( verboseLevel > 1 )
         qDebug() << " DsoSettings::DsoSettings()" << deviceName << deviceID << resetSettings;
@@ -22,8 +22,8 @@ DsoSettings::DsoSettings( const ScopeDevice *scopeDevice, int verboseLevel, bool
     int voltage_hue[] = { 60, 210, 0, 120 };   // yellow, lightblue, red, green
     int spectrum_hue[] = { 30, 240, 330, 90 }; // orange, blue, purple, green
     unsigned index = 0;
-    scope.hasACcoupling = deviceSpecification->hasACcoupling;
-    while ( scope.spectrum.size() < deviceSpecification->channels ) {
+    scope.hasACcoupling = false;
+    while ( scope.spectrum.size() < static_cast<size_t>(channels) ) {
         // Spectrum
         DsoSettingsScopeSpectrum newSpectrum;
         newSpectrum.name = tr( "SP%1" ).arg( index + 1 );
@@ -48,7 +48,7 @@ DsoSettings::DsoSettings( const ScopeDevice *scopeDevice, int verboseLevel, bool
     DsoSettingsScopeVoltage newVoltage;
     newVoltage.couplingOrMathIndex = unsigned( Dso::MathMode::ADD_CH1_CH2 );
     newVoltage.name = tr( "MATH" );
-    scope.voltage.push_back( newVoltage );
+    //scope.voltage.push_back( newVoltage );
 
     view.screen.voltage.push_back( QColor::fromHsv( 300, 0xff, 0xff ) );  // purple (V=100%)
     view.screen.spectrum.push_back( QColor::fromHsv( 300, 0xff, 0xc0 ) ); // brightness V=75%
@@ -194,8 +194,8 @@ void DsoSettings::load() {
             scope.voltage[ channel ].gainStepIndex = storeSettings->value( "gainStepIndex" ).toUInt();
         if ( storeSettings->contains( "couplingOrMathIndex" ) ) {
             scope.voltage[ channel ].couplingOrMathIndex = storeSettings->value( "couplingOrMathIndex" ).toUInt();
-            if ( channel < deviceSpecification->channels ) {
-                if ( scope.voltage[ channel ].couplingOrMathIndex >= deviceSpecification->couplings.size() ||
+            if ( channel < MaxChannels ) {
+                if ( scope.voltage[ channel ].couplingOrMathIndex >= MaxChannels ||
                      ( !scope.hasACcoupling && !scope.hasACmodification ) )
                     scope.voltage[ channel ].couplingOrMathIndex = 0; // set to default if out of range
             } else {

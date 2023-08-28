@@ -25,8 +25,8 @@
 #include "widgets/levelslider.h"
 
 
-DsoWidget::DsoWidget( DsoSettingsScope *scope, DsoSettingsView *view, const Dso::ControlSpecification *spec, QWidget *parent )
-    : QWidget( parent ), scope( scope ), view( view ), spec( spec ), mainScope( GlScope::createNormal( scope, view ) ),
+DsoWidget::DsoWidget( DsoSettingsScope *scope, DsoSettingsView *view, QWidget *parent )
+    : QWidget( parent ), scope( scope ), view( view ), mainScope( GlScope::createNormal( scope, view ) ),
       zoomScope( GlScope::createZoomed( scope, view ) ) {
 
     if ( scope->verboseLevel > 1 )
@@ -178,7 +178,7 @@ DsoWidget::DsoWidget( DsoSettingsScope *scope, DsoSettingsView *view, const Dso:
         measurementLayout->addWidget( measurementTHDLabel[ channel ], int( channel ), col++, Qt::AlignRight );
         measurementLayout->addWidget( measurementFrequencyLabel[ channel ], int( channel ), col++, Qt::AlignRight );
         measurementLayout->addWidget( measurementNoteLabel[ channel ], int( channel ), col++, Qt::AlignLeft );
-        if ( channel < spec->channels )
+        if ( channel < scope->maxChannels )
             updateVoltageCoupling( channel );
         else
             updateMathMode();
@@ -833,13 +833,13 @@ void DsoWidget::updateTriggerSource() {
 void DsoWidget::updateVoltageCoupling( ChannelID channel ) {
     if ( channel >= scope->voltage.size() )
         return;
-    measurementMiscLabel[ channel ]->setText( Dso::couplingString( scope->coupling( channel, spec ) ) );
+//    measurementMiscLabel[ channel ]->setText( Dso::couplingString( scope->coupling( channel, spec ) ) );
 }
 
 
 /// \brief Handles modeChanged signal from the voltage dock.
 void DsoWidget::updateMathMode() {
-    ChannelID mathChannel = spec->channels;
+    ChannelID mathChannel = scope->maxChannels;
     measurementMiscLabel[ mathChannel ]->setText( Dso::mathModeString( Dso::getMathMode( scope->voltage[ mathChannel ] ) ) );
     voltageUnits[ mathChannel ] = Dso::mathModeUnit( Dso::getMathMode( scope->voltage[ mathChannel ] ) );
     updateMarkerDetails();
@@ -957,11 +957,11 @@ void DsoWidget::showNew( std::shared_ptr< PPresult > analysedData ) {
     }
     const size_t CH1 = 0;
     // const size_t CH2 = 1;
-    const size_t MATH = 2;
+    const size_t MATH = 4;
     updateRecordLength( scope->horizontal.dotsOnScreen );
     pulseWidth1 = analysedData.get()->data( CH1 )->pulseWidth1;
     pulseWidth2 = analysedData.get()->data( CH1 )->pulseWidth2;
-    voltageUnits[ MATH ] = analysedData.get()->data( MATH )->voltageUnit;
+    //voltageUnits[ MATH ] = analysedData.get()->data( MATH )->voltageUnit;
     updateTriggerDetails();
 
     QString uStr;

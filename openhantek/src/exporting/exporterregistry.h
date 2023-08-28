@@ -24,7 +24,7 @@ class ExporterRegistry : public QObject {
     Q_OBJECT
 
   public:
-    explicit ExporterRegistry( const Dso::ControlSpecification *deviceSpecification, DsoSettings *settings,
+    explicit ExporterRegistry(DsoSettings *settings,
                                QObject *parent = nullptr );
 
     // Sample input. This will proably be performed in the post processing
@@ -42,7 +42,6 @@ class ExporterRegistry : public QObject {
     std::vector< ExporterInterface * >::const_iterator end();
 
     /// Device specifications
-    const Dso::ControlSpecification *deviceSpecification;
     const DsoSettings *settings;
 
   private:

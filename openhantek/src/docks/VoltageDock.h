@@ -29,7 +29,7 @@ class VoltageDock : public QDockWidget {
     /// \param settings The target settings object.
     /// \param parent The parent widget.
     /// \param flags Flags for the window manager.
-    VoltageDock( DsoSettingsScope *scope, const Dso::ControlSpecification *spec, QWidget *parent );
+    VoltageDock( DsoSettingsScope *scope, QWidget *parent );
 
     /// \brief Sets the coupling for a channel.
     /// \param channel The channel, whose coupling should be set.
@@ -64,7 +64,9 @@ class VoltageDock : public QDockWidget {
     /// \brief Loads settings into GUI
     /// \param scope Settings to load
     /// \param spec Current scope specifications
-    void loadSettings( DsoSettingsScope *scope, const Dso::ControlSpecification *spec );
+    void loadSettings( DsoSettingsScope *scope);
+    void onNewChannelData(const DsoSettingsScope* scope);
+    void onNewChannelData2();
 
   protected:
     void closeEvent( QCloseEvent *event ) override;
@@ -83,7 +85,6 @@ class VoltageDock : public QDockWidget {
     std::vector< ChannelBlock > channelBlocks;
 
     DsoSettingsScope *scope; ///< The settings provided by the parent class
-    const Dso::ControlSpecification *spec;
 
     QStringList couplingStrings; ///< The strings for the couplings
     QStringList modeStrings;     ///< The strings for the math mode

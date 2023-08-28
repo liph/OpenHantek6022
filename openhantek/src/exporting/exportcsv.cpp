@@ -83,8 +83,8 @@ void ExporterCSV::fillData( QTextStream &csvStream, const ExporterData &dto, con
         for ( ChannelID channel = 0; channel < dto.getChannelsCount(); ++channel ) {
             if ( voltageData[ channel ] != nullptr ) {
                 csvStream << sep;
-                if ( row < voltageData[ channel ]->samples.size() ) {
-                    csvStream << QLocale().toString( voltageData[ channel ]->samples[ row ] );
+                if ( row < voltageData[ channel ]->samples->size() ) {
+                    csvStream << QLocale().toString( (*voltageData[ channel ]->samples)[ row ] );
                 }
             }
         }
@@ -93,8 +93,8 @@ void ExporterCSV::fillData( QTextStream &csvStream, const ExporterData &dto, con
             for ( ChannelID channel = 0; channel < dto.getChannelsCount(); ++channel ) {
                 if ( spectrumData[ channel ] != nullptr ) {
                     csvStream << sep;
-                    if ( row < spectrumData[ channel ]->samples.size() ) {
-                        csvStream << QLocale().toString( spectrumData[ channel ]->samples[ row ] );
+                    if ( row < spectrumData[ channel ]->samples->size() ) {
+                        csvStream << QLocale().toString( (*spectrumData[ channel ]->samples)[ row ] );
                     }
                 }
             }

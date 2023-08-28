@@ -27,7 +27,7 @@ class TriggerDock : public QDockWidget {
     /// \param spec
     /// \param parent The parent widget.
     /// \param flags Flags for the window manager.
-    TriggerDock( DsoSettingsScope *scope, const Dso::ControlSpecification *mSpec, QWidget *parent );
+    TriggerDock( DsoSettingsScope *scope, QWidget *parent );
 
     /// \brief Changes the trigger mode if the new mode is supported.
     /// \param mode The trigger mode.
@@ -65,7 +65,6 @@ class TriggerDock : public QDockWidget {
     QComboBox *slopeComboBox;  ///< Select the slope that causes triggering
 
     DsoSettingsScope *scope; ///< The settings provided by the parent class
-    const Dso::ControlSpecification *mSpec;
 
     QStringList sourceStandardStrings; ///< Strings for the standard trigger sources
     QStringList smoothStandardStrings; ///< Strings for the standard trigger filtering

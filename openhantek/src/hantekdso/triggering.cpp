@@ -25,7 +25,7 @@ int Triggering::searchTriggerPoint( DSOsamples &result, Dso::Slope dsoSlope, int
         return 0;
 
     unsigned channel = unsigned( controlsettings.trigger.source );
-    const std::vector< double > &samples = result.data[ channel ];
+    const std::vector< double > &samples = *result.data[ channel ];
     int sampleCount = int( samples.size() ); ///< number of available samples
     if ( startPos < 0 || startPos >= sampleCount )
         return 0;
@@ -111,7 +111,7 @@ int Triggering::searchTriggeredPosition( DSOsamples &result ) {
     static Dso::Slope nextSlope = Dso::Slope::Positive; // for alternating slope mode X
     ChannelID channel = ChannelID( controlsettings.trigger.source );
     // Trigger channel not in use
-    if ( !scope->anyUsed( channel ) || result.data.empty() || result.data[ channel ].empty() )
+    if ( !scope->anyUsed( channel ) || result.data.empty() || result.data[ channel ]->empty() )
         return result.triggeredPosition = 0;
     if ( scope->verboseLevel > 4 )
         qDebug() << "    Triggering::searchTriggeredPosition()" << result.tag;
@@ -119,7 +119,7 @@ int Triggering::searchTriggeredPosition( DSOsamples &result ) {
     double pulseWidth1 = 0.0;
     double pulseWidth2 = 0.0;
 
-    size_t sampleCount = result.data[ channel ].size();              // number of available samples
+    size_t sampleCount = result.data[ channel ]->size();              // number of available samples
     double timeDisplay = controlsettings.samplerate.target.duration; // time for full screen width
     double sampleRate = result.samplerate;                           //
     unsigned samplesDisplay = unsigned( round( timeDisplay * controlsettings.samplerate.current ) );

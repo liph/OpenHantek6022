@@ -20,6 +20,8 @@ class TriggerDock;
 class SpectrumDock;
 class VoltageDock;
 
+
+class DsoInput;
 namespace Ui {
 class MainWindow;
 }
@@ -31,7 +33,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
   public:
-    explicit MainWindow( HantekDsoControl *dsoControl, DsoSettings *dsoSettings, ExporterRegistry *exporterRegistry,
+    explicit MainWindow( DsoInput *dsoControl, DsoSettings *dsoSettings, ExporterRegistry *exporterRegistry,
                          QWidget *parent = nullptr );
     ~MainWindow() override;
     QElapsedTimer elapsedTime;

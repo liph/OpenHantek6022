@@ -80,12 +80,14 @@ struct DsoSettingsScopeVoltage : public DsoSettingsScopeChannel {
     unsigned couplingOrMathIndex = 0; ///< Different index: coupling for real- and mode for math-channels
     bool inverted = false;            ///< true if the channel is inverted (mirrored on cross-axis)
     double probeAttn = 1.0;           ///< attenuation of probe
+    QString selectedChannelName;
 };
 
 /// \brief Holds the settings for the oscilloscope.
 struct DsoSettingsScope {
+    QVector<QString> AvaliableChannelNames;
     std::vector< double > gainSteps = { 2e-2, 5e-2, 1e-1, 2e-1,
-                                        5e-1, 1e0,  2e0,  5e0 }; ///< The selectable voltage gain steps in V/div
+                                        5e-1, 1e0,  2e0,  5e0, 1e1, 2e1, 5e1, 1e2, 2e2, 5e2, 1e3, 2e3, 5e3,}; ///< The selectable voltage gain steps in V/div
     std::vector< DsoSettingsScopeSpectrum > spectrum;            ///< Spectrum analysis settings
     std::vector< DsoSettingsScopeVoltage > voltage;              ///< Settings for the normal graphs
     DsoSettingsScopeHorizontal horizontal;                       ///< Settings for the horizontal axis
@@ -98,6 +100,8 @@ struct DsoSettingsScope {
     bool hasACcoupling = false;
     bool hasACmodification = false;
     bool liveCalibrationActive = false;
+
+    unsigned maxChannels = 0;
 
     double gain( unsigned channel ) const { return gainSteps[ voltage[ channel ].gainStepIndex ] * voltage[ channel ].probeAttn; }
 

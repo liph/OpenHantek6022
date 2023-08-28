@@ -22,16 +22,11 @@ template < typename... Args > struct SELECT {
 };
 
 
-VoltageDock::VoltageDock( DsoSettingsScope *scope, const Dso::ControlSpecification *spec, QWidget *parent )
-    : QDockWidget( tr( "Voltage" ), parent ), scope( scope ), spec( spec ) {
+VoltageDock::VoltageDock( DsoSettingsScope *scope, QWidget *parent )
+    : QDockWidget( tr( "Voltage" ), parent ), scope( scope ) {
 
     if ( scope->verboseLevel > 1 )
         qDebug() << " VoltageDock::VoltageDock()";
-
-    // Initialize lists for comboboxes
-    for ( Dso::Coupling c : spec->couplings )
-        if ( c == Dso::Coupling::DC || scope->hasACcoupling || scope->hasACmodification )
-            couplingStrings.append( Dso::couplingString( c ) );
 
     for ( auto e : Dso::MathModeEnum ) {
         modeStrings.append( Dso::mathModeString( e ) );
@@ -51,7 +46,7 @@ VoltageDock::VoltageDock( DsoSettingsScope *scope, const Dso::ControlSpecificati
     for ( ChannelID channel = 0; channel < scope->voltage.size(); ++channel ) {
         ChannelBlock b;
 
-        if ( channel < spec->channels )
+        if ( channel < scope->maxChannels )
             b.usedCheckBox = new QCheckBox( tr( "CH&%1" ).arg( channel + 1 ) ); // define shortcut <ALT>1 / <ALT>2
         else
             b.usedCheckBox = new QCheckBox( tr( "MA&TH" ) );
@@ -69,7 +64,7 @@ VoltageDock::VoltageDock( DsoSettingsScope *scope, const Dso::ControlSpecificati
 
         channelBlocks.push_back( std::move( b ) );
 
-        if ( channel < spec->channels ) {
+        if ( channel < scope->maxChannels ) {
             b.miscComboBox->addItems( couplingStrings );
             if ( scope->toolTipVisible )
                 b.miscComboBox->setToolTip( tr( "Select DC or AC coupling" ) );
@@ -80,7 +75,7 @@ VoltageDock::VoltageDock( DsoSettingsScope *scope, const Dso::ControlSpecificati
         }
         b.gainComboBox->addItems( gainStrings );
 
-        if ( channel < spec->channels ) {
+        if ( channel < scope->maxChannels ) {
             dockLayout->setColumnStretch( 1, 1 ); // stretch ComboBox in 2nd (middle) column 1x
             dockLayout->setColumnStretch( 2, 2 ); // stretch ComboBox in 3rd (last) column 2x
             dockLayout->addWidget( b.usedCheckBox, row, 0 );
@@ -118,24 +113,26 @@ VoltageDock::VoltageDock( DsoSettingsScope *scope, const Dso::ControlSpecificati
             emit invertedChanged( channel, checked );
         } );
         connect( b.miscComboBox, SELECT< int >::OVERLOAD_OF( &QComboBox::currentIndexChanged ),
-                 [ this, channel, spec, scope ]( unsigned index ) {
+                 [ this, channel, scope ]( int index ) {
                      this->scope->voltage[ channel ].couplingOrMathIndex = index;
-                     if ( channel < spec->channels ) { // CH1 & CH2
-                         // setCoupling(channel, (unsigned)index);
-                         emit couplingChanged( channel, scope->coupling( channel, spec ) );
-                     } else { // MATH function changed
-                         Dso::MathMode mathMode = Dso::getMathMode( this->scope->voltage[ channel ] );
-                         setAttn( channel, this->scope->voltage[ channel ].probeAttn );
-                         emit modeChanged( mathMode );
-                         emit usedChannelChanged( channel, Dso::mathChannelsUsed( mathMode ) );
-                     }
+                     if(index >= 0)
+                        this->scope->voltage[channel].selectedChannelName = this->scope->AvaliableChannelNames[index];
+//                     if ( channel < scope->maxChannels ) { // CH1 & CH2
+//                         // setCoupling(channel, (unsigned)index);
+//                         emit couplingChanged( channel, scope->coupling( channel, nullptr ) );
+//                     } else { // MATH function changed
+//                         Dso::MathMode mathMode = Dso::getMathMode( this->scope->voltage[ channel ] );
+//                         setAttn( channel, this->scope->voltage[ channel ].probeAttn );
+//                         emit modeChanged( mathMode );
+//                         emit usedChannelChanged( channel, Dso::mathChannelsUsed( mathMode ) );
+//                     }
                  } );
         connect( b.usedCheckBox, &QCheckBox::toggled, [ this, channel ]( bool checked ) {
             this->scope->voltage[ channel ].used = checked;
             this->scope->voltage[ channel ].visible = checked;
             unsigned mask = 0;
             if ( checked ) {
-                if ( channel < this->spec->channels )
+                if ( channel < this->scope->maxChannels )
                     mask = channel + 1;
                 else
                     mask = Dso::mathChannelsUsed( Dso::MathMode( this->scope->voltage[ 2 ].couplingOrMathIndex ) );
@@ -145,18 +142,18 @@ VoltageDock::VoltageDock( DsoSettingsScope *scope, const Dso::ControlSpecificati
     }
 
     // Load settings into GUI
-    loadSettings( scope, spec );
+    loadSettings( scope);
 
     dockWidget = new QWidget();
     SetupDockWidget( this, dockWidget, dockLayout );
 }
 
 
-void VoltageDock::loadSettings( DsoSettingsScope *scope, const Dso::ControlSpecification *spec ) {
+void VoltageDock::loadSettings( DsoSettingsScope *scope) {
     if ( scope->verboseLevel > 2 )
         qDebug() << "  VDock::loadSettings()";
     for ( ChannelID channel = 0; channel < scope->voltage.size(); ++channel ) {
-        if ( channel < spec->channels ) {
+        if ( channel < scope->maxChannels ) {
             if ( int( scope->voltage[ channel ].couplingOrMathIndex ) < couplingStrings.size() )
                 setCoupling( channel, scope->voltage[ channel ].couplingOrMathIndex );
         } else {
@@ -179,12 +176,39 @@ void VoltageDock::closeEvent( QCloseEvent *event ) {
     event->accept();
 }
 
+void VoltageDock::onNewChannelData(const DsoSettingsScope* scope)
+{
+    couplingStrings.clear();
+    for(const auto& channel : scope->AvaliableChannelNames)
+    {
+        couplingStrings << channel;
+    }
+    for(auto& channelBlock:channelBlocks)
+    {
+        int index = channelBlock.miscComboBox->currentIndex();
+        channelBlock.miscComboBox->clear();
+        channelBlock.miscComboBox->addItems(couplingStrings);
+        channelBlock.miscComboBox->setCurrentIndex(index);
+    }
+}
+
+void VoltageDock::onNewChannelData2()
+{
+    couplingStrings.clear();
+    couplingStrings << "lll";
+    for(auto& channelBlock:channelBlocks)
+    {
+        int index = channelBlock.miscComboBox->currentIndex();
+        channelBlock.miscComboBox->clear();
+        channelBlock.miscComboBox->addItems(couplingStrings);
+        channelBlock.miscComboBox->setCurrentIndex(index);
+    }
+}
 
 void VoltageDock::setCoupling( ChannelID channel, unsigned couplingIndex ) {
-    if ( channel >= spec->channels )
+    if ( channel >= scope->maxChannels )
         return;
-    if ( couplingIndex >= spec->couplings.size() )
-        return;
+
     if ( scope->verboseLevel > 2 )
         qDebug() << "  VDock::setCoupling()" << channel << couplingStrings[ int( couplingIndex ) ];
     QSignalBlocker blocker( channelBlocks[ channel ].miscComboBox );
@@ -214,10 +238,10 @@ void VoltageDock::setAttn( ChannelID channel, double attnValue ) {
     gainStrings.clear();
 
     // change unit to V² for the multiplying math functions
-    if ( channel >= spec->channels ) // MATH channel
+    if ( channel >= scope->maxChannels ) // MATH channel
         for ( double gainStep : scope->gainSteps )
             gainStrings << valueToString(
-                gainStep * attnValue, Dso::mathModeUnit( Dso::MathMode( scope->voltage[ spec->channels ].couplingOrMathIndex ) ),
+                gainStep * attnValue, Dso::mathModeUnit( Dso::MathMode( scope->voltage[ scope->maxChannels ].couplingOrMathIndex ) ),
                 -1 ); // auto format V²
     else
         for ( double gainStep : scope->gainSteps )
@@ -234,8 +258,8 @@ void VoltageDock::setAttn( ChannelID channel, double attnValue ) {
 void VoltageDock::setMode( unsigned mathModeIndex ) {
     if ( scope->verboseLevel > 2 )
         qDebug() << "  VDock::setMode()" << modeStrings[ int( mathModeIndex ) ];
-    QSignalBlocker blocker( channelBlocks[ spec->channels ].miscComboBox );
-    channelBlocks[ spec->channels ].miscComboBox->setCurrentIndex( int( mathModeIndex ) );
+    QSignalBlocker blocker( channelBlocks[ scope->maxChannels ].miscComboBox );
+    channelBlocks[ scope->maxChannels ].miscComboBox->setCurrentIndex( int( mathModeIndex ) );
 }
 
 

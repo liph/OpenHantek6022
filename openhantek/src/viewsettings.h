@@ -57,6 +57,6 @@ struct DsoSettingsView {
     int theme = 0;
     unsigned screenHeight = 0;
     unsigned screenWidth = 0;
-
+    unsigned maxChannels = 0;
     unsigned digitalPhosphorDraws() const { return digitalPhosphor ? digitalPhosphorDepth : 1; }
 };
